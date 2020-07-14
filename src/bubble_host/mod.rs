@@ -7,6 +7,15 @@ use std::sync::*;
 use std::thread;
 use std::vec::Vec;
 
+
+/*
+TODO:
+Implement clients list as concurrent hashmap, (dashmap library)
+to increase performance, (remove unneccessary looping and have client disconnection more statically implemented),
+we will use a atomicu64 to store the current client index then assign and increment each one to the next client and 
+use that index to remove from the hashmap, all while keeping concurrency (obviously)
+*/
+
 /// Events for debugging and getting information from the server.
 pub enum ServerEvent {
     None,
