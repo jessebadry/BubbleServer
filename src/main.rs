@@ -107,7 +107,7 @@ fn run_commands(recv: Receiver<String>) {
     });
 }
 fn main() {
-    println!("main starts at {}", line!());
+    println!("main starts at line {}", line!());
     let (sender, receiver) = std::sync::mpsc::channel::<String>();
 
     run_commands(receiver);
