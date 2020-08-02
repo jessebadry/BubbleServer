@@ -7,20 +7,22 @@ use std::sync::*;
 use std::thread;
 use std::vec::Vec;
 
-
 /*
 TODO:
 Implement clients list as concurrent hashmap, (dashmap library)
 to increase performance, (remove unneccessary looping and have client disconnection more statically implemented),
-we will use a atomicu64 to store the current client index then assign and increment each one to the next client and 
+we will use a atomicu64 to store the current client index then assign and increment each one to the next client and
 use that index to remove from the hashmap, all while keeping concurrency (obviously)
 */
 
 /// Events for debugging and getting information from the server.
+
+#[allow(dead_code)]
 pub enum ServerEvent {
     None,
     Disconnection(SocketAddr),
 }
+
 type ErrorSender = Option<Sender<ServerEvent>>;
 
 /// Clients List Thread Safe
@@ -118,7 +120,6 @@ where
         if self.error_sender.is_some() {
             panic!("BubbleServer Event already set!");
         }
-        println!("{}", line!());
         let (err_send, err_rec) = channel::<ServerEvent>();
         self.error_sender.get_or_insert(err_send);
         std::thread::spawn(move || loop {
