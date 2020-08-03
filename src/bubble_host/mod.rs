@@ -59,13 +59,13 @@ where
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::InvalidInput,
-                    format!("Could not find socket addre'{}' ", socket_addr),
+                    format!("Could not find socket address: '{}' ", socket_addr),
                 )
             })
     }
 
-    /// # Example:
     /// used to retrieve socket from clients by ip address
+    /// # Example:
     /// ```
     /// let server = BubbleServer::new(String::from("localhost:25568"));
     /// let addr_to_find: SocketAddr = "127.0.0.1:25565"
