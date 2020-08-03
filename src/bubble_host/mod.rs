@@ -52,22 +52,20 @@ where
         }
     }
 
-    fn get_sock_index(
-        clients: &[TcpStream],
-        socket_addr: &std::net::SocketAddr,
-    ) -> io::Result<usize> {
+    fn get_sock_index(clients: &[TcpStream], socket_addr: &SocketAddr) -> io::Result<usize> {
         clients
             .iter()
             .position(|x| &x.peer_addr().unwrap() == socket_addr)
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::InvalidInput,
-                    format!("Could not find socket address: '{}' ", socket_addr),
+                    format!("Could not find socket addre'{}' ", socket_addr),
                 )
             })
     }
-    /// used to retrieve socket from clients by ip address
+
     /// # Example:
+    /// used to retrieve socket from clients by ip address
     /// ```
     /// let server = BubbleServer::new(String::from("localhost:25568"));
     /// let addr_to_find: SocketAddr = "127.0.0.1:25565"
