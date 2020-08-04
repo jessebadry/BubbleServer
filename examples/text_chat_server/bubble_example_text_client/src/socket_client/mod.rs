@@ -57,6 +57,7 @@ pub fn create_new<F: Fn(Packet) + Send + Sync>(ip: &str, listen_call: &'static F
      let call = listen_call;
      thread::spawn(move || loop {
           let mut stream = connect(&ip_string);
+          println!("socket_ip = {}", stream.local_addr().unwrap().to_string());
           stream.listen(call);
      });
 }
