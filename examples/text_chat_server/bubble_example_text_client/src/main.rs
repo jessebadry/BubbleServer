@@ -9,13 +9,14 @@ fn get_line() -> String {
 //Implement the example  text chat behaviour
 fn text_client_recv(data: socket_client::Packet) {
     let (buf, socket_) = data;
+    
     let text_msg = std::str::from_utf8(&buf).unwrap_or_else(|err| {
         println!("Err converting msg, : {} ", err);
         ""
     });
     println!("Received message : {}\n\n", text_msg);
     //If the servers sends this sockets IP Address, the user's input will open.
-
+    
     if text_msg == socket_.local_addr().unwrap().to_string() {
         let mut socket_clone = socket_.try_clone().unwrap();
         thread::spawn(move || loop {
