@@ -1,4 +1,5 @@
 /target
+
 /examples/text_chat_server/target
 /examples/text_chat_server/bubble_example_text_client/target
 **/*.rs.bk
