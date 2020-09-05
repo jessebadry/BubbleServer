@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::*;
 use std::thread;
-use std::vec::Vec;
 /*
 TODO:
 Implement clients list as concurrent hashmap, (dashmap library)
@@ -166,18 +165,19 @@ where
         });
         Ok(())
     }
-    fn next_client_index(&self) -> u64 {
+    fn get_next_client_index(&self) -> u64 {
+        let num = self.client_index.load(Ordering::Relaxed) + 1;
         self.client_index.store(
-            self.client_index.load(Ordering::Relaxed) + 1,
+            num,
             Ordering::Relaxed,
         );
 
-        self.client_index.load(Ordering::Relaxed)
+        num
     }
 
     ///Locks `clients` ([`Vec`]`<`[`TcpStream`]`>`) and adds `socket` to Vec
     fn add_client(&self, socket: TcpStream) -> u64 {
-        let next_index = self.next_client_index();
+        let next_index = self.get_next_client_index();
         self.clients.as_ref().insert(next_index, socket);
         next_index
     }
@@ -220,7 +220,7 @@ where
 
         //Accept new incoming connections
         thread::spawn(move || loop {
-            println!("waiting for next client..");
+            debug!("waiting for next client..");
             if let Ok((mut socket, _)) = socket_acceptor.accept() {
                 println!("Accepted Client");
                 // Add Client to the clients vector
