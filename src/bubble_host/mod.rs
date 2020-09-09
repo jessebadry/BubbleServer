@@ -19,7 +19,13 @@ use that index to remove from the hashmap, all while keeping concurrency (obviou
 #[allow(dead_code)]
 pub enum ServerEvent {
     None,
+    HandleError(String),
     Disconnection(SocketAddr),
+}
+#[derive(Clone)]
+pub enum AllowedClientCount {
+    Unlimited,
+    Amount(u64),
 }
 type SocketData = (u64, TcpStream);
 type ErrorSender = Arc<Mutex<Option<Sender<ServerEvent>>>>;
@@ -36,7 +42,7 @@ pub struct BubbleServer<T: Clone + Send + 'static> {
     error_sender: ErrorSender,
     clients: Arc<DashMap<u64, TcpStream>>,
     client_index: Arc<AtomicU64>,
-
+    client_limit: AllowedClientCount,
     param: Option<T>,
 }
 
@@ -49,7 +55,8 @@ where
             ip,
             clients: Default::default(),
             client_index: Default::default(),
-            error_sender: Arc::new(Mutex::new(None)),
+            error_sender: Default::default(),
+            client_limit: AllowedClientCount::Unlimited,
             param: Option::None,
         }
     }
@@ -85,17 +92,18 @@ where
     /// let socket = server.get_sock(&addr_to_find);
     /// assert!(socket.is_none());
     /// ```
-    // #[allow(dead_code)]
-    // pub fn get_sock(&self, socket_addr: &SocketAddr) -> Option<TcpStream> {
-    //     let clients = self.get_clients().ok()?;
+    #[allow(dead_code)]
+    pub fn get_sock(&self, socket_addr: &SocketAddr) -> Option<TcpStream> {
+        let clients = self.get_clients().ok()?;
 
-    //     // if let Ok(index) = BubbleServer::<T>::get_sock_index(&clients, socket_addr) {
-    //     //     Some(clients[index].try_clone().unwrap())
-    //     // } else {
-    //     //     None
-    //     // }
-    //     None
-    // }
+        for client_ref in clients.iter() {
+            let socket = client_ref.value();
+            if socket.peer_addr().unwrap() == *socket_addr {
+                return socket.try_clone().ok();
+            }
+        }
+        None
+    }
     ///Set `param` in HandleClientType for connecting clients.
     pub fn set_hc_param(&mut self, param: T) {
         self.param.get_or_insert(param);
@@ -168,14 +176,17 @@ where
     }
     fn get_next_client_index(&self) -> u64 {
         let num = self.client_index.load(Ordering::Relaxed) + 1;
-        self.client_index.store(
-            num,
-            Ordering::Relaxed,
-        );
+        self.client_index.store(num, Ordering::Relaxed);
 
         num
     }
-
+    fn exeeds_client_limit(&self, count: usize) -> bool {
+        if let AllowedClientCount::Amount(num) = self.client_limit {
+            count > num as usize
+        } else {
+            false
+        }
+    }
     ///Locks `clients` ([`Vec`]`<`[`TcpStream`]`>`) and adds `socket` to Vec
     fn add_client(&self, socket: TcpStream) -> u64 {
         let next_index = self.get_next_client_index();
@@ -223,6 +234,10 @@ where
         thread::spawn(move || loop {
             debug!("waiting for next client..");
             if let Ok((mut socket, _)) = socket_acceptor.accept() {
+                let client_count = { self_.get_clients().unwrap().len() };
+                if self_.exeeds_client_limit(client_count) {
+                    continue;
+                }
                 println!("Accepted Client");
                 // Add Client to the clients vector
                 let client_index = self_.add_client(
@@ -234,7 +249,10 @@ where
                 self_
                     .handle_client((client_index, &mut socket), handle_client_cb.clone())
                     .unwrap_or_else(|e| {
-                        println!("Error in handle_client : {}", e);
+                        self_.send_event(ServerEvent::HandleError(format!(
+                            "Could not handle client, error received {}",
+                            e
+                        )));
                     });
             }
             // Could provide implementation for an erroneous accept, and send that to the error_sender.

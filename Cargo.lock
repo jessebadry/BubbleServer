@@ -52,12 +52,13 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "3.11.9"
+version = "3.11.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ad86b725566cbbf4c0cb01a17bfd1c9ad1830786a02dfc11c380b21b08f02ed"
+checksum = "0f260e2fc850179ef410018660006951c1b55b79e8087e87111a2c388994b9b5"
 dependencies = [
  "ahash",
  "cfg-if",
+ "num_cpus",
 ]
 
 [[package]]
@@ -69,6 +70,15 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
+]
+
+[[package]]
+name = "hermit-abi"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3deed196b6e7f9e44a2ae8d94225d80302d81208b1bb673fd21fe634645c85a9"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -162,6 +172,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac267bcc07f48ee5f8935ab0d24f316fb722d7a1292e2913f0cc196b29ffd611"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_cpus"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
+dependencies = [
+ "hermit-abi",
+ "libc",
 ]
 
 [[package]]

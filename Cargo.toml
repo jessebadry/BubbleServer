@@ -7,5 +7,5 @@ authors = [""]
 
 [dependencies]
 log = { version =  "0.4.8", features = ["std", "serde"] }
-dashmap = "3.11.4"
+dashmap = "3.11.10"
 num = "0.2.1"
