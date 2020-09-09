@@ -22,7 +22,7 @@ pub enum ServerEvent {
     Disconnection(SocketAddr),
 }
 type SocketData = (u64, TcpStream);
-type ErrorSender = Arc<Mutex<Option<Sender<ServerEvent>>>>;
+type EventSender = Arc<Mutex<Option<Sender<ServerEvent>>>>;
 
 /// Clients List Thread Safe
 pub type ClientsListTS = Arc<Mutex<Vec<TcpStream>>>;
@@ -33,7 +33,7 @@ pub type HandleClientType<'a, T> = (&'a mut TcpStream, Option<T>, &'a mut Bubble
 #[derive(Clone)]
 pub struct BubbleServer<T: Clone + Send + 'static> {
     ip: String,
-    error_sender: ErrorSender,
+    event_sender: EventSender,
     clients: Arc<DashMap<u64, TcpStream>>,
     client_index: Arc<AtomicU64>,
 
@@ -49,7 +49,7 @@ where
             ip,
             clients: Default::default(),
             client_index: Default::default(),
-            error_sender: Arc::new(Mutex::new(None)),
+            event_sender: Arc::new(Mutex::new(None)),
             param: Option::None,
         }
     }
@@ -65,7 +65,7 @@ where
     //         })
     // }
     fn send_event(&self, event: ServerEvent) {
-        let sender = self.error_sender.as_ref();
+        let sender = self.event_sender.as_ref();
 
         if let Some(sender) = &*sender.lock().unwrap() {
             println!("Sending event to sender..");
@@ -101,8 +101,8 @@ where
         self.param.get_or_insert(param);
     }
     /// Shutdown the socket, then send a disconnection event to the `error_sender`.
-    fn handle_socket_disconnection(&self, socket: &SocketData) -> io::Result<()> {
-        let (index, socket) = socket;
+    fn handle_socket_disconnection(&self, socket_data: &SocketData) -> io::Result<()> {
+        let (index, socket) = socket_data;
 
         //Remove socket from clients list
         self.remove_socket(&index)?;
@@ -124,7 +124,7 @@ where
     #[allow(dead_code)]
     pub fn set_on_event<F: Fn(ServerEvent) + Send + Sync + 'static>(&mut self, callback: F) {
         //Check if event already set.
-        let err_sender = &mut self.error_sender.lock().unwrap();
+        let err_sender = &mut self.event_sender.lock().unwrap();
         if err_sender.is_some() {
             panic!("BubbleServer Event already set!");
         }
