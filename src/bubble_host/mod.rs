@@ -6,16 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::*;
 use std::thread;
-/*
-TODO:
-Implement clients list as concurrent hashmap, (dashmap library)
-to increase performance, (remove unneccessary looping and have client disconnection more statically implemented),
-we will use a atomicu64 to store the current client index then assign and increment each one to the next client and
-use that index to remove from the hashmap, all while keeping concurrency (obviously)
-*/
 
 /// Events for debugging and getting information from the server.
-
 #[allow(dead_code)]
 pub enum ServerEvent {
     None,
@@ -223,7 +215,6 @@ where
         thread::spawn(move || loop {
             debug!("waiting for next client..");
             if let Ok((mut socket, _)) = socket_acceptor.accept() {
-                println!("Accepted Client");
                 // Add Client to the clients vector
                 let client_index = self_.add_client(
                     socket
