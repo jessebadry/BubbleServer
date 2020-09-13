@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::*;
 use std::thread;
-
 /// Events for debugging and getting information from the server.
 #[allow(dead_code)]
 pub enum ServerEvent {
@@ -24,11 +23,10 @@ pub type ClientsListTS = Arc<Mutex<Vec<TcpStream>>>;
 pub type HandleClientType<'a, T> = (&'a mut TcpStream, Option<T>, &'a mut BubbleServer<T>);
 #[derive(Clone)]
 pub struct BubbleServer<T: Clone + Send + 'static> {
-    ip: String,
+    ip: Arc<String>,
     event_sender: EventSender,
     clients: Arc<DashMap<u64, TcpStream>>,
     client_index: Arc<AtomicU64>,
-
     param: Option<T>,
 }
 
@@ -38,11 +36,11 @@ where
 {
     pub fn new(ip: String) -> Self {
         BubbleServer::<T> {
-            ip,
+            ip: Arc::new(ip),
             clients: Default::default(),
             client_index: Default::default(),
             event_sender: Arc::new(Mutex::new(None)),
-            param: Option::None,
+            param: Default::default(),
         }
     }
     // fn get_sock_index(clients: &[TcpStream], socket_addr: &SocketAddr) -> io::Result<usize> {
@@ -60,7 +58,6 @@ where
         let sender = self.event_sender.as_ref();
 
         if let Some(sender) = &*sender.lock().unwrap() {
-            println!("Sending event to sender..");
             sender
                 .send(event)
                 .unwrap_or_else(|e| println!("error sending to error_sender {}", e));
@@ -149,7 +146,6 @@ where
         let mut _self = self.clone();
         thread::spawn(move || {
             handle_client((&mut socket, _self.param.clone(), &mut _self));
-            println!("disconnecting..!");
             _self
                 .handle_socket_disconnection(&(index, socket))
                 .unwrap_or_else(|why| {
@@ -160,10 +156,7 @@ where
     }
     fn get_next_client_index(&self) -> u64 {
         let num = self.client_index.load(Ordering::Relaxed) + 1;
-        self.client_index.store(
-            num,
-            Ordering::Relaxed,
-        );
+        self.client_index.store(num, Ordering::Relaxed);
 
         num
     }
@@ -182,14 +175,14 @@ where
         &mut self,
         handle_client_cb: impl Fn(HandleClientType<T>) + Send + Clone + 'static,
     ) -> io::Result<()> {
-        let ip = &self.ip;
-        debug!("server with  ip of {} has started...", ip);
-        let socket_acceptor = TcpListener::bind(ip).map_err(|e| {
+        let ip = (*self.ip).clone();
+        debug!("server with  ip of {} has started...", &ip);
+        let socket_acceptor = TcpListener::bind(&ip).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::AddrNotAvailable,
                 format!(
                     "'{}' is in use or is an invalid ip address! Raw Err: {}",
-                    ip, e
+                    &ip, e
                 ),
             )
         })?;

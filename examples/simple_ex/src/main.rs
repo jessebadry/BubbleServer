@@ -1,8 +1,7 @@
 extern crate bubble_server;
-use bubble_server::bubble_host::BubbleServer;
+use bubble_server::bubble_host::{BubbleServer, ServerEvent};
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::str;
 fn make_invalid_socket_msg(socket: &TcpStream) -> String {
     let sock_addr = socket.peer_addr().unwrap().to_string();
 
@@ -10,7 +9,7 @@ fn make_invalid_socket_msg(socket: &TcpStream) -> String {
 }
 
 fn main() {
-    let server = BubbleServer::<()>::new("127.0.0.1:25565".into());
+    let mut server = BubbleServer::<()>::new("127.0.0.1:25565".into());
 
     //Start the server, pass in a closure/function that will handle each socket that connects
     //to the server.
@@ -38,14 +37,22 @@ fn main() {
             socket
                 .write_all(format!("Message received has been processed as '{}'", msg).as_bytes())
                 .unwrap_or_else(|e| {
-                    println!("Error couldn't send message to '{}'! Why: {}", socket_addr, e)
+                    println!(
+                        "Error couldn't send message to '{}'! Why: {}",
+                        socket_addr, e
+                    )
                 });
             //End of handle so the socket will be closed/disposed of.
-            println!("Leaving handle thread!");
+            println!("Leaving handle thread, which will close socket!");
         })
         .unwrap_or_else(|why| {
             println!("Could not start server, why: {}", why);
         });
+    server.set_on_event(|event| {
+        if let ServerEvent::Disconnection(sock) = event {
+            println!("sock disconnected: {}", sock);
+        }
+    });
 
     //Park the thread as `start` is non-blocking!!!
     std::thread::park();
