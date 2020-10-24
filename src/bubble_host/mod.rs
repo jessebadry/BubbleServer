@@ -132,7 +132,7 @@ where
         clients.remove(socket_index);
         Ok(())
     }
-    fn clear_sockets(&mut self){
+    pub fn clear_sockets(&mut self){
         let clients = self.get_clients();
         clients.clear();
     }
