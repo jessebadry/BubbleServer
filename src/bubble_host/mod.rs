@@ -97,9 +97,6 @@ where
         self.remove_socket(&index)?;
         let sock_addr = socket.peer_addr().unwrap();
 
-        socket
-            .shutdown(Shutdown::Both)
-            .expect("Could not shutdown stream..");
         self.send_event(ServerEvent::Disconnection(sock_addr));
 
         debug!("Removed client {}, at index {}", sock_addr, index);
@@ -107,8 +104,8 @@ where
     }
 
     /// `get_clients` Returns clients list reference using [`Arc::clone`].
-    pub fn get_clients(&self) -> io::Result<Arc<DashMap<u64, TcpStream>>> {
-        Ok(Arc::clone(&self.clients))
+    pub fn get_clients(&self) -> Arc<DashMap<u64, TcpStream>> {
+        Arc::clone(&self.clients)
     }
     #[allow(dead_code)]
     pub fn set_on_event<F: Fn(ServerEvent) + Send + Sync + 'static>(&mut self, callback: F) {
@@ -131,9 +128,13 @@ where
     /// * Removes `socket` from clients list.
     fn remove_socket(&self, socket_index: &u64) -> io::Result<()> {
         //Is this the least verbose way to dereference this?
-        let clients = self.get_clients()?;
+        let clients = self.get_clients();
         clients.remove(socket_index);
         Ok(())
+    }
+    fn clear_sockets(&mut self){
+        let clients = self.get_clients();
+        clients.clear();
     }
     /// Runs the user's defined function in a new thread passing in the newly connected socket.
     fn handle_client(
