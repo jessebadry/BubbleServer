@@ -1,17 +1,12 @@
 use dashmap::DashMap;
 use log::debug;
 use std::io;
-use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::*;
 use std::thread;
-/// Events for debugging and getting information from the server.
-#[allow(dead_code)]
-pub enum ServerEvent {
-    None,
-    Disconnection(SocketAddr),
-}
+
 type SocketData = (u64, TcpStream);
 type EventSender = Arc<Mutex<Option<Sender<ServerEvent>>>>;
 
@@ -21,6 +16,14 @@ pub type ClientsListTS = Arc<Mutex<Vec<TcpStream>>>;
 /// Data that is sent to user provided FnMut `set in fn start` when a client connects to a
 /// started(fn start) server
 pub type HandleClientType<'a, T> = (&'a mut TcpStream, Option<T>, &'a mut BubbleServer<T>);
+
+/// Events for debugging and getting information from the server.
+#[allow(dead_code)]
+pub enum ServerEvent {
+    None,
+    Disconnection(SocketAddr),
+}
+
 #[derive(Clone)]
 pub struct BubbleServer<T: Clone + Send + 'static> {
     ip: Arc<String>,
@@ -34,26 +37,19 @@ impl<T> BubbleServer<T>
 where
     T: Clone + Send + 'static,
 {
-    pub fn new(ip: String) -> Self {
+    ///Initializes a new instance of BubbleServer.
+    ///
+    ///
+    pub fn new(ip: impl AsRef<str>) -> Self {
         BubbleServer::<T> {
-            ip: Arc::new(ip),
+            ip: Arc::new(ip.as_ref().to_string()),
             clients: Default::default(),
             client_index: Default::default(),
-            event_sender: Arc::new(Mutex::new(None)),
+            event_sender: Default::default(),
             param: Default::default(),
         }
     }
-    // fn get_sock_index(clients: &[TcpStream], socket_addr: &SocketAddr) -> io::Result<usize> {
-    //     clients
-    //         .iter()
-    //         .position(|x| &x.peer_addr().unwrap() == socket_addr)
-    //         .ok_or_else(|| {
-    //             Error::new(
-    //                 ErrorKind::InvalidInput,
-    //                 format!("Could not find socket addre'{}' ", socket_addr),
-    //             )
-    //         })
-    // }
+    /// Emits a ServerEvent to the event sender
     fn send_event(&self, event: ServerEvent) {
         let sender = self.event_sender.as_ref();
 
@@ -63,28 +59,7 @@ where
                 .unwrap_or_else(|e| println!("error sending to error_sender {}", e));
         }
     }
-    /// # Example:
-    /// used to retrieve socket from clients by ip address
-    /// # Example:
-    /// ```
-    /// let server = BubbleServer::new(String::from("localhost:25568"));
-    /// let addr_to_find: SocketAddr = "127.0.0.1:25565"
-    ///     .parse()
-    ///     .expect("Could not parse ip address!");
-    /// let socket = server.get_sock(&addr_to_find);
-    /// assert!(socket.is_none());
-    /// ```
-    // #[allow(dead_code)]
-    // pub fn get_sock(&self, socket_addr: &SocketAddr) -> Option<TcpStream> {
-    //     let clients = self.get_clients().ok()?;
 
-    //     // if let Ok(index) = BubbleServer::<T>::get_sock_index(&clients, socket_addr) {
-    //     //     Some(clients[index].try_clone().unwrap())
-    //     // } else {
-    //     //     None
-    //     // }
-    //     None
-    // }
     ///Set `param` in HandleClientType for connecting clients.
     pub fn set_hc_param(&mut self, param: T) {
         self.param.get_or_insert(param);
@@ -107,6 +82,7 @@ where
     pub fn get_clients(&self) -> Arc<DashMap<u64, TcpStream>> {
         Arc::clone(&self.clients)
     }
+
     #[allow(dead_code)]
     pub fn set_on_event<F: Fn(ServerEvent) + Send + Sync + 'static>(&mut self, callback: F) {
         //Check if event already set.
@@ -124,18 +100,19 @@ where
     }
     /// Removes given TcpStream from server's `clients`
     ///
-    /// * Locks `clients` vec ([`Vec`]`<`[`TcpStream`]`>`)
-    /// * Removes `socket` from clients list.
+    /// ## Arguments
+    /// `socket_index` - index of client-socket
+    ///
+    /// ## Result
     fn remove_socket(&self, socket_index: &u64) -> io::Result<()> {
-        //Is this the least verbose way to dereference this?
-        let clients = self.get_clients();
-        clients.remove(socket_index);
+        self.get_clients().remove(socket_index);
         Ok(())
     }
-    pub fn clear_sockets(&mut self){
-        let clients = self.get_clients();
-        clients.clear();
+
+    pub fn clear_sockets(&mut self) {
+        self.get_clients().clear();
     }
+
     /// Runs the user's defined function in a new thread passing in the newly connected socket.
     fn handle_client(
         &mut self,
@@ -162,7 +139,7 @@ where
         num
     }
 
-    ///Locks `clients` ([`Vec`]`<`[`TcpStream`]`>`) and adds `socket` to Vec
+    /// Locks `clients` ([`Vec`]`<`[`TcpStream`]`>`) and adds `socket` to Vec
     fn add_client(&self, socket: TcpStream) -> u64 {
         let next_index = self.get_next_client_index();
         self.clients.as_ref().insert(next_index, socket);
@@ -188,21 +165,6 @@ where
             )
         })?;
 
-        //I don't want the user to have the potential to deadlock the server
-        //without explicitly locking mutex's in their own code.
-        //for example it should be obvious that this will deadlock when a user connects
-        // ```
-        // {
-        //     let server = BubbleServer::new(String::from("localhost:25568"));
-        //     let clients = server.get_clients().expect("could not get clients!");
-        //     let clients = clients.lock().unwrap();
-        //     server.start(&|data: HandleClientType| {
-        //         println!("new connection! dropping now!");
-        //     });
-
-        //     thread::park();
-        // }
-        // ```
         let mut self_ = self.clone();
 
         //Accept new incoming connections
