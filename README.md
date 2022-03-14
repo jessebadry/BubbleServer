@@ -16,8 +16,6 @@ I hope to continue developing this project post graduation, hopefully while work
 
 For example, the next step for this project is implementing async-await where better suited.
 
-# Example
-
 ## Echo Example
 
 Bubble-Server doesn't include any client-side functionalities, and instead leaves the user up to it's implementation. In future, a client-side library could be built for BubbleServer, and may become standard.
