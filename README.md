@@ -9,14 +9,12 @@ able to share data across clients, and BubbleServer achieves this through generi
 
 I also wanted to learn good practices using Rust, and wanted to get very familiar with the borrow-checker in Rust. 
 
-This project has helped me greatly in understanding multi-threading and concurrency, debugging dead-locks further, and building network-infrastrucutre. 
+This project has helped me greatly in understanding multi-threading and concurrency, debugging dead-locks, and building network-infrastructure. 
 
 ## Room for improvement
 I hope to continue developing this project post graduation, hopefully while working in a position dealing with data-communications.
 
 For example, the next step for this project is implementing async-await where better suited.
-
-# Example
 
 ## Echo Example
 
