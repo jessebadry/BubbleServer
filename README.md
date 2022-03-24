@@ -49,7 +49,7 @@ fn main() -> ResultIO<()> {
         // retrieve shared client data (Atomic unsigned integer)
         let echo_count = echo_count.unwrap();
 
-        // handle client by continously reading incoming data using Rust's TcpStreams
+        // handle client in some custom implementation with sockets
         handle_new_client(socket, echo_count); // blocking function
 
         // after this closure finishes, BubbleServer will automatically delete and cleanup this client
