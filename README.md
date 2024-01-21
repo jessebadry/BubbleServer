@@ -25,7 +25,7 @@ Bubble-Server doesn't include any client-side functionalities, and instead leave
 ```rust
 type AtomicInteger = Arc<AtomicU64>;
 
-fn main() -> ResultIO<()> {
+fn main() -> Result<()> {
     // An echo server, where every client receives which nth echo it contributed.
     // i.e client(1) sent 1 message and receives. (echo count = 1), 
     // now client(2) sends and receives. (echo count = 2)
@@ -64,10 +64,10 @@ fn main() -> ResultIO<()> {
 
 ### echo_client.rs
 ```rust
-use std::io::{Read, Result as IOResult, Write};
+use std::io::{Read, Result, Write};
 use std::net::TcpStream;
 
-fn main() -> IOResult<()> {
+fn main() -> Result<()> {
     let mut stream = TcpStream::connect("localhost:3000")
         .expect("Could not connect to server. Did you run the server-example?");
 
